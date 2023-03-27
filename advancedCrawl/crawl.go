@@ -50,16 +50,11 @@ func GetMatchedDomainsByRegex(s string, url string) {
 	var wg sync.WaitGroup
 	if matches != nil {
 		for _, match := range matches {
-			//=========================================================
-			re := regexp.MustCompile(`(\d{4}-\d{2}-\d{2})`)
-			// Find the date in the string.
-			date := re.FindString(url)
-			//=========================================================
 			var defaultTime time.Time // default time
 			var D = model.Domain{
 				DomainUrl:   match[1], // string url lấy được
 				Title:       "",
-				Description: date,
+				Description: "",
 				Keywords:    "",
 				Owner:       "",
 				Expires:     defaultTime,
