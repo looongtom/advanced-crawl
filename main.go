@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	urlOrigin  = "https://www.cubdomain.com/domains-registered-dates/"
-	redisQueue = "update-domain-cubdomain"
+	urlOrigin    = "https://www.cubdomain.com/domains-registered-dates/"
+	redisQueue   = "update-domain-cubdomain"
+	redisAddress = "localhost:6379"
 )
 
 var (
@@ -37,7 +38,7 @@ func ConnectRedis() {
 		log.Fatal(err)
 	}
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisAddress,
 		Password: "",
 		DB:       0,
 	})
