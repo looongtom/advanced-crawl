@@ -55,14 +55,15 @@ func GetMatchedDomainsByRegex(s string, url string) {
 			// Find the date in the string.
 			date := re.FindString(url)
 			//=========================================================
+			var defaultTime time.Time // default time
 			var D = model.Domain{
 				DomainUrl:   match[1], // string url lấy được
 				Title:       "",
 				Description: date,
 				Keywords:    "",
 				Owner:       "",
-				Expires:     time.Now(),
-				Created:     time.Now(),
+				Expires:     defaultTime,
+				Created:     defaultTime,
 			}
 			temp := bson.M{
 				"domain":      D.GetDomainUrl(),
