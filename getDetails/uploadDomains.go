@@ -23,27 +23,37 @@ const (
 	regexCreated     = "<td class=\"title\">Created:</td>\\n\\s*<td>(.*?)</td>"
 	regexExpires     = "<td class=\"title\">Expires:</td>\\n\\s*<td>(.*?)</td>"
 	regexOwner       = "td class=\"title\">Owner:</td>\\n\\s*<td>\\n\\s*<a.*>(.*?)</a>"
+	layoutDate       = "2006-01-02"
+)
+
+var (
+	matchDescription = regexp.MustCompile(regexDescription)
+	matchKeyword     = regexp.MustCompile(regexKeywords)
+	matchTitle       = regexp.MustCompile(regexTitle)
+	matchCreated     = regexp.MustCompile(regexCreated)
+	matchExpires     = regexp.MustCompile(regexExpires)
+	matchOwner       = regexp.MustCompile(regexOwner)
 )
 
 func GetRegexMatch(src string, regexName string) string {
 	var re *regexp.Regexp
 	if regexName == "description" {
-		re = regexp.MustCompile(regexDescription)
+		re = matchDescription
 	}
 	if regexName == "keywords" {
-		re = regexp.MustCompile(regexKeywords)
+		re = matchKeyword
 	}
 	if regexName == "title" {
-		re = regexp.MustCompile(regexTitle)
+		re = matchTitle
 	}
 	if regexName == "created" {
-		re = regexp.MustCompile(regexCreated)
+		re = matchCreated
 	}
 	if regexName == "expires" {
-		re = regexp.MustCompile(regexExpires)
+		re = matchExpires
 	}
 	if regexName == "owner" {
-		re = regexp.MustCompile(regexOwner)
+		re = matchOwner
 	}
 	matches := re.FindAllStringSubmatch(src, -1)
 	if matches != nil {
@@ -52,18 +62,20 @@ func GetRegexMatch(src string, regexName string) string {
 
 	return "none"
 }
+
 func ConvertTime(dateStr string) time.Time {
-	layout := "2006-01-02"
-	date, err := time.Parse(layout, dateStr)
+	date, err := time.Parse(layoutDate, dateStr)
 	if err != nil {
 		var t time.Time //default time
 		return t
 	}
 	return date
 }
+
 func GetDomainDetail(domainName string, url string) {
 	resp, err := http.Get(url)
 	src, err := advancedCrawl.GetBody(*resp, err)
+
 	var domain = model.Domain{
 		DomainUrl:   domainName, // string url lấy được
 		Title:       GetRegexMatch(src, "title"),
@@ -73,29 +85,47 @@ func GetDomainDetail(domainName string, url string) {
 		Expires:     ConvertTime(GetRegexMatch(src, "expires")),
 		Created:     ConvertTime(GetRegexMatch(src, "created")),
 	}
-	err = connection.UpdateDataMongodb(advancedCrawl.Config, domain)
+
+	err = connection.UpdateDataMongodb(domain)
 }
-func LoopInChan(chListDomains chan model.Domain) {
-	var wg sync.WaitGroup
+
+func LoopInChan(chListDomains chan model.Domain, wg *sync.WaitGroup) {
 	for domain := range chListDomains {
 		GetDomainDetail(domain.DomainUrl, urlBase+domain.DomainUrl)
-		wg.Add(1)
-		wg.Done()
 	}
-	wg.Wait()
 
+	wg.Done()
 }
+func getListDomain(result []string, chListDomains chan<- model.Domain, limit int) {
+
+	for i := 0; i < limit; i++ {
+		var domain model.Domain
+
+		err := json.Unmarshal([]byte(result[i]), &domain)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		chListDomains <- domain
+	}
+
+	close(chListDomains)
+}
+
 func UploadDomains() {
+
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisAddress,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
+
 	result, err := client.LRange(redisQueue, 0, -1).Result()
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Convert strings to User structs
+
+	// Convert strings to Domains structs
 	listDomains := make([]model.Domain, len(result))
 	for i, v := range result {
 		var domain model.Domain
@@ -106,23 +136,11 @@ func UploadDomains() {
 		listDomains[i] = domain
 	}
 
-	pageLimit := len(result)
-	chListDomains := make(chan model.Domain, 100000)
+	limit := len(result)
+	chListDomains := make(chan model.Domain)
 	var wg sync.WaitGroup
-	wg.Add(pageLimit)
-
-	for i := 0; i < pageLimit; i++ {
-		go func(taskNum int) {
-			var domain model.Domain
-			err = json.Unmarshal([]byte(result[taskNum]), &domain)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer wg.Done()
-			chListDomains <- domain
-		}(i)
-	}
+	wg.Add(1)
+	go getListDomain(result, chListDomains, limit)
+	go LoopInChan(chListDomains, &wg)
 	wg.Wait()
-	close(chListDomains)
-	LoopInChan(chListDomains)
 }

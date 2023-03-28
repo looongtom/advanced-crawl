@@ -4,7 +4,16 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f9fd1703-b2f6-40b5-8152-160176ae20a8" name="Changes" comment="Refactor" />
+    <list default="true" id="f9fd1703-b2f6-40b5-8152-160176ae20a8" name="Changes" comment="waitGroup and Channel- Goroutines example">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/advancedCrawl/crawl.go" beforeDir="false" afterPath="$PROJECT_DIR$/advancedCrawl/crawl.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/connection/mongoConnection.go" beforeDir="false" afterPath="$PROJECT_DIR$/connection/mongoConnection.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example1.go" beforeDir="false" afterPath="$PROJECT_DIR$/example1.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example2.go" beforeDir="false" afterPath="$PROJECT_DIR$/example2.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/getDetails/uploadDomains.go" beforeDir="false" afterPath="$PROJECT_DIR$/getDetails/uploadDomains.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model/domain.go" beforeDir="false" afterPath="$PROJECT_DIR$/model/domain.go" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -20,6 +29,9 @@
   <component name="GOROOT" url="file://$PROJECT_DIR$/../go/go1.20" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/advancedCrawl/crawl.go" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -60,13 +72,13 @@
     </key>
   </component>
   <component name="RunManager" selected="Go Build.go build main.go">
-    <configuration name="go build crawl-file (1)" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+    <configuration name="go build crawl-file (2)" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
       <module name="crawl-domain-advanced" />
       <working_directory value="$PROJECT_DIR$" />
       <kind value="FILE" />
       <package value="crawl-file" />
       <directory value="$PROJECT_DIR$" />
-      <filePath value="$PROJECT_DIR$/clean.go" />
+      <filePath value="$PROJECT_DIR$/example1.go" />
       <method v="2" />
     </configuration>
     <configuration name="go build crawl-file" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
@@ -82,8 +94,18 @@
       <module name="crawl-domain-advanced" />
       <working_directory value="$PROJECT_DIR$" />
       <kind value="FILE" />
+      <package value="crawl-file" />
       <directory value="$PROJECT_DIR$" />
       <filePath value="$PROJECT_DIR$/advancedCrawl/crawl.go" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build example2.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="crawl-domain-advanced" />
+      <working_directory value="$PROJECT_DIR$" />
+      <kind value="FILE" />
+      <package value="crawl-file" />
+      <directory value="$PROJECT_DIR$" />
+      <filePath value="$PROJECT_DIR$/example2.go" />
       <method v="2" />
     </configuration>
     <configuration name="go build main.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
@@ -94,21 +116,13 @@
       <filePath value="$PROJECT_DIR$/main.go" />
       <method v="2" />
     </configuration>
-    <configuration name="go build mongoConnection.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
-      <module name="crawl-domain-advanced" />
-      <working_directory value="$PROJECT_DIR$" />
-      <kind value="FILE" />
-      <directory value="$PROJECT_DIR$" />
-      <filePath value="$PROJECT_DIR$/connection/mongoConnection.go" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Go Build.go build main.go" />
         <item itemvalue="Go Build.go build crawl-file" />
-        <item itemvalue="Go Build.go build mongoConnection.go" />
-        <item itemvalue="Go Build.go build crawl-file (1)" />
+        <item itemvalue="Go Build.go build example2.go" />
         <item itemvalue="Go Build.go build crawl.go" />
+        <item itemvalue="Go Build.go build crawl-file (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -131,11 +145,9 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <ignored-roots>
-      <path value="$PROJECT_DIR$" />
-    </ignored-roots>
     <MESSAGE value="Refactor" />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor" />
+    <MESSAGE value="waitGroup and Channel- Goroutines example" />
+    <option name="LAST_COMMIT_MESSAGE" value="waitGroup and Channel- Goroutines example" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
