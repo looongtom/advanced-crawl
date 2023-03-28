@@ -6,14 +6,12 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.uber.org/zap"
 	"os"
 )
 
 var (
 	Client     *mongo.Client
 	err        error
-	Logger     *zap.Logger
 	Config     *dataConfig.Config
 	Collection *mongo.Collection
 )
@@ -37,18 +35,18 @@ func ReadEnv() (*dataConfig.Config, error) {
 	}, nil
 
 }
-func ConnectToMongoDb() {
+func ConnectToMongoDb() error {
 	Config, err = ReadEnv()
 
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 
 	clientOptions := options.Client().ApplyURI(Config.MongoURI)
 	Client, err = mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 	Collection = Client.Database(Config.Database).Collection(Config.Collection)
-
+	return nil
 }

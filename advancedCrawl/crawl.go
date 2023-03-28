@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"io"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -64,7 +63,6 @@ func GetBody(resp http.Response, err error) (string, error) {
 	}(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
-
 	if err != nil {
 		return string(body), err
 	}
@@ -79,6 +77,9 @@ func GetPageLimit(urlStart string) int {
 	if len(matches) > 1 {
 		match := matches[1]
 		pageLimit, err = strconv.Atoi(match)
+		if err != nil {
+			Logger.Error(err.Error())
+		}
 	}
 	return pageLimit
 }
@@ -86,11 +87,11 @@ func GetPageLimit(urlStart string) int {
 func GetListDomainInADay(url string, chListDay chan<- string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Error(err.Error())
 	}
 	src, err := GetBody(*resp, err)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Error(err.Error())
 	}
 	GetMatchesByRegex(src, chListDay)
 }
@@ -144,40 +145,41 @@ func GetMatchedDomains(s string) {
 
 	err := connection.SaveFileToMongoDb(models)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Error(err.Error())
 	}
 }
 
 func GetListDomainInAPage(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Error(err.Error())
 	}
 
 	src, err := GetBody(*resp, err)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Error(err.Error())
 	}
 
 	GetMatchedDomains(src)
 }
 
 func getListDomainThroughPages(urlDay string, pageLimit int) {
-	urlDay = urlDay[:len(urlDay)-1]
-
+	if len(urlDay) > 0 {
+		urlDay = urlDay[:len(urlDay)-1]
+	} else {
+		Logger.Error("therse is nothing in " + urlDay)
+	}
 	for page := 1; page <= pageLimit; page++ {
 		url := fmt.Sprintf("%s%d", urlDay, page)
 		GetListDomainInAPage(url)
 	}
 }
 
-func getListDomain(chListDay chan string, wg *sync.WaitGroup) {
+func getListDomain(chListDay chan string) {
 	for day := range chListDay {
 		pageLimit := GetPageLimit(day)
 		getListDomainThroughPages(day, pageLimit)
 	}
-
-	wg.Done()
 }
 
 func HandleListDomain(urlBase string) {
@@ -186,7 +188,12 @@ func HandleListDomain(urlBase string) {
 	chListDay := make(chan string)
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		getListDomain(chListDay)
+	}()
+
 	go getListDay(urlBase, pageLimit, chListDay)
-	go getListDomain(chListDay, &wg)
 	wg.Wait()
 }

@@ -20,11 +20,11 @@ const (
 	redisAddress = "localhost:6379"
 )
 
-func ConnectRedis() {
+func ConnectRedis() error {
 	collection := connectMongoDb.Client.Database(connectMongoDb.Config.Database).Collection(connectMongoDb.Config.Collection)
 	cur, err := collection.Find(context.Background(), bson.M{})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
@@ -34,6 +34,7 @@ func ConnectRedis() {
 	})
 
 	PushDataInQueue(cur, redisClient)
+	return nil
 }
 
 func PushDataInQueue(cur *mongo.Cursor, redisClient *redis.Client) {
@@ -65,9 +66,17 @@ func PushDataInQueue(cur *mongo.Cursor, redisClient *redis.Client) {
 }
 
 func main() {
-	connectMongoDb.ConnectToMongoDb()
+	err := connectMongoDb.ConnectToMongoDb()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	advancedCrawl.HandleListDomain(urlOrigin) //	get all domains
-	ConnectRedis()                            //push in a queue
-	getDetails.UploadDomains()                //update domain
+
+	err = ConnectRedis() //push in a queue
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	getDetails.UploadDomains() //update domain
 }

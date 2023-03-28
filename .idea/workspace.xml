@@ -4,15 +4,13 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f9fd1703-b2f6-40b5-8152-160176ae20a8" name="Changes" comment="waitGroup and Channel- Goroutines example">
+    <list default="true" id="f9fd1703-b2f6-40b5-8152-160176ae20a8" name="Changes" comment="Use waitgroup and channel clearly">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/advancedCrawl/crawl.go" beforeDir="false" afterPath="$PROJECT_DIR$/advancedCrawl/crawl.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/connection/mongoConnection.go" beforeDir="false" afterPath="$PROJECT_DIR$/connection/mongoConnection.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/connectMongoDb/connectDb.go" beforeDir="false" afterPath="$PROJECT_DIR$/connectMongoDb/connectDb.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example1.go" beforeDir="false" afterPath="$PROJECT_DIR$/example1.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example2.go" beforeDir="false" afterPath="$PROJECT_DIR$/example2.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/getDetails/uploadDomains.go" beforeDir="false" afterPath="$PROJECT_DIR$/getDetails/uploadDomains.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/model/domain.go" beforeDir="false" afterPath="$PROJECT_DIR$/model/domain.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -147,7 +145,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Refactor" />
     <MESSAGE value="waitGroup and Channel- Goroutines example" />
-    <option name="LAST_COMMIT_MESSAGE" value="waitGroup and Channel- Goroutines example" />
+    <MESSAGE value="Use waitgroup and channel clearly" />
+    <option name="LAST_COMMIT_MESSAGE" value="Use waitgroup and channel clearly" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>
