@@ -89,13 +89,12 @@ func GetDomainDetail(domainName string, url string) {
 	err = connection.UpdateDataMongodb(domain)
 }
 
-func LoopInChan(chListDomains chan model.Domain, wg *sync.WaitGroup) {
+func LoopInChan(chListDomains chan model.Domain) {
 	for domain := range chListDomains {
 		GetDomainDetail(domain.DomainUrl, urlBase+domain.DomainUrl)
 	}
-
-	wg.Done()
 }
+
 func getListDomain(result []string, chListDomains chan<- model.Domain, limit int) {
 
 	for i := 0; i < limit; i++ {
@@ -140,7 +139,10 @@ func UploadDomains() {
 	chListDomains := make(chan model.Domain)
 	var wg sync.WaitGroup
 	wg.Add(1)
+	go func() {
+		wg.Done()
+		go LoopInChan(chListDomains)
+	}()
 	go getListDomain(result, chListDomains, limit)
-	go LoopInChan(chListDomains, &wg)
 	wg.Wait()
 }
