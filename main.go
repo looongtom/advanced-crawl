@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crawl-file/advancedCrawl"
 	"crawl-file/connectMongoDb"
 	"crawl-file/getDetails"
 	"crawl-file/model"
@@ -75,10 +74,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = advancedCrawl.HandleListDomain(urlOrigin) //	get all domains
-	if err != nil {
-		log.Fatal(err)
-	}
+	//err = advancedCrawl.HandleListDomain(urlOrigin) //	get all domains
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
 	err = ConnectRedis() //push in a queue
 	if err != nil {

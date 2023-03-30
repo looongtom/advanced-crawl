@@ -3,6 +3,7 @@ package advancedCrawl
 import (
 	"crawl-file/connection"
 	"crawl-file/model"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
@@ -54,14 +55,7 @@ func GetBody(resp http.Response, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			Logger.Error(err.Error())
-		}
-	}(resp.Body)
-
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return string(body), err
@@ -85,34 +79,38 @@ func GetPageLimit(urlStart string) (int, error) {
 		match := matches[1]
 		pageLimit, err = strconv.Atoi(match)
 		if err != nil {
-			Logger.Error(err.Error())
 			return 1, err // nếu xảy ra lỗi không lấy được pageLimit thì cho = 1
 		}
 	}
 	return pageLimit, nil
 }
 
-func GetListDomainInADay(url string, chListDay chan<- string) {
+func GetListDomainInADay(url string, chListDay chan<- string) error {
 	resp, err := http.Get(url)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 	src, err := GetBody(*resp, err)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 	GetMatchesByRegex(src, chListDay)
+	return nil
 }
 
 func getListDay(urlBase string, pageLimit int, chListDay chan<- string) {
 	for page := 1; page <= pageLimit; page++ {
 		url := fmt.Sprintf("%s%d", urlBase, page)
-		GetListDomainInADay(url, chListDay)
+		err := GetListDomainInADay(url, chListDay)
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
 	}
 	close(chListDay)
 }
 
-func GetMatchedDomains(s string) {
+func GetMatchedDomains(s string) error {
 	matches := reListDomain.FindAllStringSubmatch(s, -1)
 	var wg sync.WaitGroup
 	var doc []interface{}
@@ -152,44 +150,57 @@ func GetMatchedDomains(s string) {
 
 	err := connection.SaveFileToMongoDb(models)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
+	return nil
 }
 
-func GetListDomainInAPage(url string) {
+func GetListDomainInAPage(url string) error {
 	resp, err := http.Get(url)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 
 	src, err := GetBody(*resp, err)
 	if err != nil {
-		Logger.Error(err.Error())
+		return err
 	}
 
-	GetMatchedDomains(src)
+	err = GetMatchedDomains(src)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func getListDomainThroughPages(urlDay string, pageLimit int) {
+func getListDomainThroughPages(urlDay string, pageLimit int) error {
 	if len(urlDay) > 0 {
 		urlDay = urlDay[:len(urlDay)-1]
 	} else {
-		Logger.Error("therse is nothing in " + urlDay)
+		return errors.New("invalid url" + urlDay)
 	}
 	for page := 1; page <= pageLimit; page++ {
 		url := fmt.Sprintf("%s%d", urlDay, page)
-		GetListDomainInAPage(url)
+		err := GetListDomainInAPage(url)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func getListDomain(chListDay chan string) {
+func getListDomain(chListDay chan string) error {
 	for day := range chListDay {
 		pageLimit, err := GetPageLimit(day)
 		if err != nil {
-			Logger.Error(err.Error())
+			return err
 		}
-		getListDomainThroughPages(day, pageLimit)
+		err = getListDomainThroughPages(day, pageLimit)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func HandleListDomain(urlBase string) error {
@@ -203,7 +214,11 @@ func HandleListDomain(urlBase string) error {
 
 	go func() {
 		defer wg.Done()
-		getListDomain(chListDay)
+		err := getListDomain(chListDay)
+		if err != nil {
+			Logger.Error(err.Error())
+			return
+		}
 	}()
 
 	go getListDay(urlBase, pageLimit, chListDay)

@@ -107,6 +107,7 @@ func LoopInChan(chListDomains chan model.Domain) {
 		err := GetDomainDetail(domain.DomainUrl, urlBase+domain.DomainUrl)
 		if err != nil {
 			Logger.Error(err.Error())
+			continue
 		}
 	}
 }
@@ -147,6 +148,7 @@ func UploadDomains() error {
 		err = json.Unmarshal([]byte(v), &domain)
 		if err != nil {
 			Logger.Error(err.Error())
+			continue
 		}
 		listDomains[i] = domain
 	}
