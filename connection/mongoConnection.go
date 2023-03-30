@@ -11,7 +11,7 @@ import (
 
 func SaveFileToMongoDb(doc []mongo.WriteModel) error {
 	bulkWrite, err := connectMongoDb.Collection.BulkWrite(context.Background(), doc)
-	if bulkWrite != nil {
+	if bulkWrite != nil || err != nil {
 		return err
 	}
 	return nil

@@ -6,7 +6,7 @@ import (
 	"crawl-file/model"
 	"encoding/json"
 	"github.com/go-redis/redis"
-	"log"
+	"go.uber.org/zap"
 	"net/http"
 	"regexp"
 	"sync"
@@ -27,6 +27,7 @@ const (
 )
 
 var (
+	Logger           *zap.Logger
 	matchDescription = regexp.MustCompile(regexDescription)
 	matchKeyword     = regexp.MustCompile(regexKeywords)
 	matchTitle       = regexp.MustCompile(regexTitle)
@@ -72,9 +73,16 @@ func ConvertTime(dateStr string) time.Time {
 	return date
 }
 
-func GetDomainDetail(domainName string, url string) {
+func GetDomainDetail(domainName string, url string) error {
 	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+
 	src, err := advancedCrawl.GetBody(*resp, err)
+	if err != nil {
+		return err
+	}
 
 	var domain = model.Domain{
 		DomainUrl:   domainName, // string url lấy được
@@ -87,11 +95,19 @@ func GetDomainDetail(domainName string, url string) {
 	}
 
 	err = connection.UpdateDataMongodb(domain)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoopInChan(chListDomains chan model.Domain) {
 	for domain := range chListDomains {
-		GetDomainDetail(domain.DomainUrl, urlBase+domain.DomainUrl)
+		err := GetDomainDetail(domain.DomainUrl, urlBase+domain.DomainUrl)
+		if err != nil {
+			Logger.Error(err.Error())
+		}
 	}
 }
 
@@ -102,7 +118,7 @@ func getListDomain(result []string, chListDomains chan<- model.Domain, limit int
 
 		err := json.Unmarshal([]byte(result[i]), &domain)
 		if err != nil {
-			log.Fatal(err)
+			Logger.Error(err.Error())
 		}
 
 		chListDomains <- domain
@@ -111,7 +127,7 @@ func getListDomain(result []string, chListDomains chan<- model.Domain, limit int
 	close(chListDomains)
 }
 
-func UploadDomains() {
+func UploadDomains() error {
 
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisAddress,
@@ -121,7 +137,7 @@ func UploadDomains() {
 
 	result, err := client.LRange(redisQueue, 0, -1).Result()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Convert strings to Domains structs
@@ -130,7 +146,7 @@ func UploadDomains() {
 		var domain model.Domain
 		err = json.Unmarshal([]byte(v), &domain)
 		if err != nil {
-			log.Fatal(err)
+			Logger.Error(err.Error())
 		}
 		listDomains[i] = domain
 	}
@@ -146,4 +162,6 @@ func UploadDomains() {
 
 	go getListDomain(result, chListDomains, limit)
 	wg.Wait()
+
+	return nil
 }

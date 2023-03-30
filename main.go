@@ -33,36 +33,40 @@ func ConnectRedis() error {
 		DB:       0,
 	})
 
-	PushDataInQueue(cur, redisClient)
+	err = PushDataInQueue(cur, redisClient)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func PushDataInQueue(cur *mongo.Cursor, redisClient *redis.Client) {
+func PushDataInQueue(cur *mongo.Cursor, redisClient *redis.Client) error {
 	// Push data to Redis queue
 	for cur.Next(context.Background()) {
 
 		var result model.Domain
 		err := cur.Decode(&result)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		jsonData, err := json.Marshal(result)
 		if err != nil {
-			log.Fatal(err)
-
+			return err
 		}
+
 		err = redisClient.RPush(redisQueue, jsonData).Err()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	if err := cur.Err(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println("saved all domains in redis")
+	return nil
 }
 
 func main() {
@@ -71,12 +75,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	advancedCrawl.HandleListDomain(urlOrigin) //	get all domains
+	err = advancedCrawl.HandleListDomain(urlOrigin) //	get all domains
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	err = ConnectRedis() //push in a queue
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	getDetails.UploadDomains() //update domain
+	err = getDetails.UploadDomains() //update domain
+	if err != nil {
+		log.Fatal(err)
+	}
 }
