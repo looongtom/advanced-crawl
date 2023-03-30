@@ -140,9 +140,10 @@ func UploadDomains() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		wg.Done()
-		go LoopInChan(chListDomains)
+		defer wg.Done()
+		LoopInChan(chListDomains)
 	}()
+
 	go getListDomain(result, chListDomains, limit)
 	wg.Wait()
 }
