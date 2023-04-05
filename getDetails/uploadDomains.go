@@ -2,8 +2,8 @@ package getDetails
 
 import (
 	"crawl-file/advancedCrawl"
-	"crawl-file/connection"
 	"crawl-file/model"
+	"crawl-file/service"
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"go.uber.org/zap"
@@ -34,6 +34,15 @@ var (
 	matchCreated     = regexp.MustCompile(regexCreated)
 	matchExpires     = regexp.MustCompile(regexExpires)
 	matchOwner       = regexp.MustCompile(regexOwner)
+	redisClient      = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		DB:   0,
+	})
+	client = redis.NewClient(&redis.Options{
+		Addr:     redisAddress,
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 )
 
 func GetRegexMatch(src string, regexName string) string {
@@ -79,7 +88,7 @@ func GetDomainDetail(domainName string, url string) error {
 		return err
 	}
 
-	src, err := advancedCrawl.GetBody(*resp, err)
+	src, err := advancedCrawl.GetBody(*resp)
 	if err != nil {
 		return err
 	}
@@ -94,7 +103,7 @@ func GetDomainDetail(domainName string, url string) error {
 		Created:     ConvertTime(GetRegexMatch(src, "created")),
 	}
 
-	err = connection.UpdateDataMongodb(domain)
+	err = service.UpdateDataMongodb(domain)
 	if err != nil {
 		return err
 	}
@@ -120,6 +129,7 @@ func getListDomain(result []string, chListDomains chan<- model.Domain, limit int
 		err := json.Unmarshal([]byte(result[i]), &domain)
 		if err != nil {
 			Logger.Error(err.Error())
+
 		}
 
 		chListDomains <- domain
@@ -129,13 +139,6 @@ func getListDomain(result []string, chListDomains chan<- model.Domain, limit int
 }
 
 func UploadDomains() error {
-
-	client := redis.NewClient(&redis.Options{
-		Addr:     redisAddress,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-
 	result, err := client.LRange(redisQueue, 0, -1).Result()
 	if err != nil {
 		return err
@@ -143,14 +146,18 @@ func UploadDomains() error {
 
 	// Convert strings to Domains structs
 	listDomains := make([]model.Domain, len(result))
-	for i, v := range result {
+
+	for v := range result {
 		var domain model.Domain
-		err = json.Unmarshal([]byte(v), &domain)
+		err = json.Unmarshal([]byte(result[v]), &domain)
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
 		}
-		listDomains[i] = domain
+		if domain.Status == model.StatusEnable {
+			listDomains = append(listDomains, domain)
+		}
+
 	}
 
 	limit := len(result)

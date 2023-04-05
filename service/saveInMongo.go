@@ -1,4 +1,4 @@
-package connection
+package service
 
 import (
 	"context"
@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 )
 
 func SaveFileToMongoDb(doc []mongo.WriteModel) error {
 	bulkWrite, err := connectMongoDb.Collection.BulkWrite(context.Background(), doc)
-	if bulkWrite != nil || err != nil {
+	if err != nil {
 		return err
 	}
+	log.Printf("Inserted %d documents", bulkWrite.InsertedCount)
 	return nil
 }
 
@@ -28,6 +30,7 @@ func UpdateDataMongodb(domain model.Domain) error {
 		"owner":       domain.Owner,
 		"expires":     domain.Expires,
 		"created":     domain.Created,
+		"status":      model.StatusUpdated,
 	}}
 
 	// Update the first document matching the filter

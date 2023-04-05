@@ -1,8 +1,8 @@
 package advancedCrawl
 
 import (
-	"crawl-file/connection"
 	"crawl-file/model"
+	"crawl-file/service"
 	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,16 +34,15 @@ func GetMatchesByRegex(s string, chList chan<- string) {
 	var wg sync.WaitGroup
 
 	if matches != nil {
-
 		for i := 0; i < len(matches); i++ {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-
-				if len(matches[index]) > 1 {
-					chList <- matches[index][2] // --> panic
+				if len(matches[index]) < 3 {
+					return
 				}
 
+				chList <- matches[index][2] // --> panic
 			}(i)
 		}
 
@@ -51,15 +50,8 @@ func GetMatchesByRegex(s string, chList chan<- string) {
 	}
 }
 
-func GetBody(resp http.Response, err error) (string, error) {
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
+func GetBody(resp http.Response) (string, error) {
 	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return string(body), err
-	}
 	return string(body), err //src cua url
 }
 
@@ -68,20 +60,25 @@ func GetPageLimit(urlStart string) (int, error) {
 	if err != nil {
 		return 1, err // nếu xảy ra lỗi không lấy được pageLimit thì cho = 1
 	}
+	defer resp.Body.Close()
 
-	src, err := GetBody(*resp, err)
+	src, err := GetBody(*resp)
 	if err != nil {
 		return 1, err // nếu xảy ra lỗi không lấy được pageLimit thì cho = 1
 	}
+
 	matches := rePageLimit.FindStringSubmatch(src)
 	var pageLimit int
-	if len(matches) > 1 {
-		match := matches[1]
-		pageLimit, err = strconv.Atoi(match)
-		if err != nil {
-			return 1, err // nếu xảy ra lỗi không lấy được pageLimit thì cho = 1
-		}
+	if len(matches) < 2 {
+		return 0, fmt.Errorf("errror")
 	}
+
+	match := matches[1]
+	pageLimit, err = strconv.Atoi(match)
+	if err != nil {
+		return 1, err
+	}
+
 	return pageLimit, nil
 }
 
@@ -90,10 +87,12 @@ func GetListDomainInADay(url string, chListDay chan<- string) error {
 	if err != nil {
 		return err
 	}
-	src, err := GetBody(*resp, err)
+
+	src, err := GetBody(*resp)
 	if err != nil {
 		return err
 	}
+
 	GetMatchesByRegex(src, chListDay)
 	return nil
 }
@@ -120,39 +119,34 @@ func GetMatchedDomains(s string) error {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
-				if len(matches[index]) > 0 {
-
-					var defaultTime time.Time // default time
-					var D = model.Domain{
-						DomainUrl:   matches[index][1], // string url lấy được
-						Title:       "",
-						Description: "",
-						Keywords:    "",
-						Owner:       "",
-						Expires:     defaultTime,
-						Created:     defaultTime,
-					}
-
-					doc = append(doc, D)
-
+				if len(matches[index]) < 2 {
+					return
 				}
+
+				var defaultTime time.Time // default time
+				var D = model.Domain{
+					DomainUrl:   matches[index][1], // string url lấy được
+					Title:       "",
+					Description: "",
+					Keywords:    "",
+					Owner:       "",
+					Expires:     defaultTime,
+					Created:     defaultTime,
+					Status:      model.StatusDisable,
+				}
+
+				doc = append(doc, D)
 			}(i)
 		}
 		wg.Wait()
 	}
-
-	fmt.Println("Saving in mongo ", len(doc), "domains ")
 
 	models := make([]mongo.WriteModel, len(doc))
 	for i, domain := range doc {
 		models[i] = mongo.NewInsertOneModel().SetDocument(domain)
 	}
 
-	err := connection.SaveFileToMongoDb(models)
-	if err != nil {
-		return err
-	}
-	return nil
+	return service.SaveFileToMongoDb(models)
 }
 
 func GetListDomainInAPage(url string) error {
@@ -161,7 +155,7 @@ func GetListDomainInAPage(url string) error {
 		return err
 	}
 
-	src, err := GetBody(*resp, err)
+	src, err := GetBody(*resp)
 	if err != nil {
 		return err
 	}
@@ -174,11 +168,11 @@ func GetListDomainInAPage(url string) error {
 }
 
 func getListDomainThroughPages(urlDay string, pageLimit int) error {
-	if len(urlDay) > 0 {
-		urlDay = urlDay[:len(urlDay)-1]
-	} else {
+	if len(urlDay) < 0 {
 		return errors.New("invalid url" + urlDay)
 	}
+	urlDay = urlDay[:len(urlDay)-1]
+
 	for page := 1; page <= pageLimit; page++ {
 		url := fmt.Sprintf("%s%d", urlDay, page)
 		err := GetListDomainInAPage(url)
@@ -189,18 +183,23 @@ func getListDomainThroughPages(urlDay string, pageLimit int) error {
 	return nil
 }
 
-func getListDomain(chListDay chan string) error {
+func getListDomain(chListDay chan string, wg *sync.WaitGroup) {
 	for day := range chListDay {
+		time.Sleep(time.Second * 5)
 		pageLimit, err := GetPageLimit(day)
+
 		if err != nil {
-			return err
+			fmt.Println(err)
+			continue
 		}
+
 		err = getListDomainThroughPages(day, pageLimit)
 		if err != nil {
-			return err
+			fmt.Println(err)
+			continue
 		}
 	}
-	return nil
+	wg.Done()
 }
 
 func HandleListDomain(urlBase string) error {
@@ -209,18 +208,12 @@ func HandleListDomain(urlBase string) error {
 		return err
 	}
 	chListDay := make(chan string)
+	noOfWorkers := 10
 	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-		err := getListDomain(chListDay)
-		if err != nil {
-			Logger.Error(err.Error())
-			return
-		}
-	}()
-
+	for i := 0; i < noOfWorkers; i++ {
+		wg.Add(1)
+		go getListDomain(chListDay, &wg)
+	}
 	go getListDay(urlBase, pageLimit, chListDay)
 	wg.Wait()
 	return nil
