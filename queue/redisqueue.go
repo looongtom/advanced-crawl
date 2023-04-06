@@ -47,21 +47,11 @@ var GenerateDomain = func() {
 					continue
 				}
 
-				item.Status = model.StatusEnable
-
-				//_, err = collection.ReplaceOne(context.Background(), bson.M{"_id": item.ID}, item)
 				jsonData, err := json.Marshal(item)
 				if err != nil {
 					panic(err)
 				}
 				err = redisClient.RPush(redisQueue, jsonData).Err()
-				if err != nil {
-					continue
-				}
-
-				filter := bson.M{"_id": item.ID}
-				update := bson.M{"$set": bson.M{"status": model.StatusEnable}}
-				_, err = collection.UpdateOne(context.Background(), filter, update)
 				if err != nil {
 					continue
 				}

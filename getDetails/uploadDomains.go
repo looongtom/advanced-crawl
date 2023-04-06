@@ -126,6 +126,11 @@ func UploadDomains() error {
 	if err != nil {
 		return err
 	}
+
+	err = client.FlushDB().Err() // reset redis
+	if err != nil {
+		return err
+	}
 	listDomains := make(chan model.Domain)
 
 	var wg sync.WaitGroup
@@ -143,7 +148,7 @@ func UploadDomains() error {
 				Logger.Error(err.Error())
 				continue
 			}
-			if domain.Status == model.StatusEnable {
+			if domain.Status == model.StatusDisable {
 				listDomains <- domain
 			}
 

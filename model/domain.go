@@ -9,8 +9,6 @@ import (
 const (
 	StatusEnable  = 1
 	StatusDisable = 0
-	StatusUpdated = 2
-	StatusDone    = 3
 )
 
 type Domain struct {

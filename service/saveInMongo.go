@@ -30,14 +30,11 @@ func UpdateDataMongodb(domain model.Domain) error {
 		"owner":       domain.Owner,
 		"expires":     domain.Expires,
 		"created":     domain.Created,
-		"status":      model.StatusUpdated,
+		"status":      model.StatusEnable,
 	}}
 
 	// Update the first document matching the filter
 	result, err := connectMongoDb.Collection.UpdateOne(context.Background(), filter, update)
-	if domain.Description != "none" {
-		fmt.Println(result)
-	}
 	if err != nil {
 		return err
 	}

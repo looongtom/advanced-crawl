@@ -5,9 +5,6 @@ import (
 	"crawl-file/connectMongoDb"
 	"crawl-file/queue"
 	"flag"
-	"github.com/go-redis/redis"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/zap"
 	"log"
 	"runtime"
 )
@@ -17,11 +14,8 @@ const (
 )
 
 var (
-	queueMode   bool
-	Logger      *zap.Logger
-	cur         *mongo.Cursor
-	err         error
-	redisClient *redis.Client
+	queueMode bool
+	err       error
 )
 
 func main() {
