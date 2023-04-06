@@ -121,55 +121,35 @@ func LoopInChan(chListDomains chan model.Domain) {
 	}
 }
 
-func getListDomain(result []string, chListDomains chan<- model.Domain, limit int) {
-
-	for i := 0; i < limit; i++ {
-		var domain model.Domain
-
-		err := json.Unmarshal([]byte(result[i]), &domain)
-		if err != nil {
-			Logger.Error(err.Error())
-
-		}
-
-		chListDomains <- domain
-	}
-
-	close(chListDomains)
-}
-
 func UploadDomains() error {
 	result, err := client.LRange(redisQueue, 0, -1).Result()
 	if err != nil {
 		return err
 	}
+	listDomains := make(chan model.Domain)
 
-	// Convert strings to Domains structs
-	listDomains := make([]model.Domain, len(result))
-
-	for v := range result {
-		var domain model.Domain
-		err = json.Unmarshal([]byte(result[v]), &domain)
-		if err != nil {
-			Logger.Error(err.Error())
-			continue
-		}
-		if domain.Status == model.StatusEnable {
-			listDomains = append(listDomains, domain)
-		}
-
-	}
-
-	limit := len(result)
-	chListDomains := make(chan model.Domain)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		LoopInChan(chListDomains)
+		go LoopInChan(listDomains)
 	}()
 
-	go getListDomain(result, chListDomains, limit)
+	go func() {
+		for v := range result {
+			var domain model.Domain
+			err = json.Unmarshal([]byte(result[v]), &domain)
+			if err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+			if domain.Status == model.StatusEnable {
+				listDomains <- domain
+			}
+
+		}
+		close(listDomains)
+	}()
 	wg.Wait()
 
 	return nil

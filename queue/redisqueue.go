@@ -6,6 +6,7 @@ import (
 	"crawl-file/getDetails"
 	"crawl-file/model"
 	"encoding/json"
+	"fmt"
 	"github.com/go-redis/redis"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
@@ -31,7 +32,7 @@ var GenerateDomain = func() {
 	go func() {
 		for range time.Tick(time.Second * 2) {
 			collection := connectMongoDb.Client.Database(connectMongoDb.Config.Database).Collection(connectMongoDb.Config.Collection)
-			filter := bson.M{}
+			filter := bson.M{"status": model.StatusDisable}
 			cursor, err := collection.Find(context.Background(), filter)
 
 			if err != nil {
@@ -46,26 +47,23 @@ var GenerateDomain = func() {
 					continue
 				}
 
-				if item.Status == model.StatusDisable {
-					item.Status = model.StatusEnable
+				item.Status = model.StatusEnable
 
-					//_, err = collection.ReplaceOne(context.Background(), bson.M{"_id": item.ID}, item)
-					jsonData, err := json.Marshal(item)
-					if err != nil {
-						panic(err)
-					}
-					err = redisClient.RPush(redisQueue, jsonData).Err()
-					if err != nil {
-						continue
-					}
+				//_, err = collection.ReplaceOne(context.Background(), bson.M{"_id": item.ID}, item)
+				jsonData, err := json.Marshal(item)
+				if err != nil {
+					panic(err)
+				}
+				err = redisClient.RPush(redisQueue, jsonData).Err()
+				if err != nil {
+					continue
+				}
 
-					filter := bson.M{"_id": item.ID}
-					update := bson.M{"$set": bson.M{"status": model.StatusEnable}}
-					_, err = collection.UpdateOne(context.Background(), filter, update)
-					if err != nil {
-						panic(err)
-					}
-
+				filter := bson.M{"_id": item.ID}
+				update := bson.M{"$set": bson.M{"status": model.StatusEnable}}
+				_, err = collection.UpdateOne(context.Background(), filter, update)
+				if err != nil {
+					continue
 				}
 
 			}
@@ -75,12 +73,16 @@ var GenerateDomain = func() {
 				return
 			}
 
+			errCh := make(chan error)
 			go func() {
 				err := getDetails.UploadDomains()
-				if err != nil {
-
-				}
+				errCh <- err
 			}()
+
+			er := <-errCh
+			if er != nil {
+				fmt.Println("Error:", er)
+			}
 
 		}
 	}()

@@ -106,7 +106,6 @@ func getListDay(urlBase string, pageLimit int, chListDay chan<- string) {
 			continue
 		}
 	}
-	close(chListDay)
 }
 
 func GetMatchedDomains(s string) error {
@@ -184,6 +183,7 @@ func getListDomainThroughPages(urlDay string, pageLimit int) error {
 }
 
 func getListDomain(chListDay chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for day := range chListDay {
 		time.Sleep(time.Second * 5)
 		pageLimit, err := GetPageLimit(day)
@@ -199,7 +199,6 @@ func getListDomain(chListDay chan string, wg *sync.WaitGroup) {
 			continue
 		}
 	}
-	wg.Done()
 }
 
 func HandleListDomain(urlBase string) error {
@@ -209,12 +208,22 @@ func HandleListDomain(urlBase string) error {
 	}
 	chListDay := make(chan string)
 	noOfWorkers := 10
+
 	var wg sync.WaitGroup
+	wg.Add(1)
 	for i := 0; i < noOfWorkers; i++ {
-		wg.Add(1)
 		go getListDomain(chListDay, &wg)
 	}
-	go getListDay(urlBase, pageLimit, chListDay)
+
+	var addWg sync.WaitGroup
+	addWg.Add(1)
+	go func() {
+		defer addWg.Done()
+		getListDay(urlBase, pageLimit, chListDay)
+		close(chListDay)
+	}()
+	//go getListDay(urlBase, pageLimit, chListDay)
+
 	wg.Wait()
 	return nil
 }
